@@ -1,0 +1,182 @@
+:root {
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --border: #334155;
+  --text: #e2e8f0;
+  --text-muted: #94a3b8;
+  --accent: #38bdf8;
+  --green: #34d399;
+  --yellow: #fbbf24;
+  --purple: #a78bfa;
+  --red: #fb7185;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+/* Topbar */
+.topbar {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; }
+.brand h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+.updated-at { font-size: 0.8rem; color: var(--text-muted); }
+
+/* Summary cards */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+.summary-cards .card-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+}
+.card-value {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--green);
+  white-space: nowrap;
+}
+.card-value.secondary { color: var(--accent); }
+.card-value.payout { color: var(--yellow); }
+.card-sub { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.3rem; }
+.total-card { background: linear-gradient(135deg, rgba(56,189,248,0.12), rgba(52,211,153,0.08)); border-color: rgba(56,189,248,0.35); }
+.total-card .card-value { color: #fff; font-size: 2rem; }
+
+/* Layout */
+.layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.tables-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+.layout .table-card.full { grid-column: 1 / -1; }
+.layout h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 820px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+/* Donut */
+.donut-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0 0.5rem;
+}
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+}
+.legend-item .key { display: flex; align-items: center; gap: 0.5rem; }
+.legend-item .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.legend-item .val { font-weight: 600; color: #fff; }
+
+/* Table */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 420px;
+}
+.payout-note {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.card-sub strong { color: var(--accent); font-weight: 700; }
+.data-table th {
+  text-align: left;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.data-table td {
+  padding: 0.6rem;
+  border-bottom: 1px solid rgba(51,65,85,0.5);
+}
+.data-table tbody tr:hover { background: rgba(56,189,248,0.05); }
+.data-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table tfoot td {
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+  border-bottom: none;
+  padding-top: 0.7rem;
+  color: var(--green);
+}
+.empty-row td { color: var(--text-muted); text-align: center; font-style: italic; }
+
+/* Error */
+.error-banner {
+  grid-column: 1 / -1;
+  background: rgba(251,113,133,0.1);
+  border: 1px solid rgba(251,113,133,0.4);
+  color: var(--red);
+  padding: 0.9rem 1.1rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}

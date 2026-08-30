@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Money Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <h1>Money Control</h1>
+      </div>
+      <div class="updated-at" id="updatedAt">Loading…</div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="summary-cards">
+      <div class="card total-card">
+        <div class="card-label">Total Savings</div>
+        <div class="card-value" id="totalSavings">—</div>
+        <div class="card-sub" id="totalSub">Loading…</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Money Saved</div>
+        <div class="card-value secondary" id="moneySaved">—</div>
+        <div class="card-sub" id="moneySavedCount">—</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Deposits Saved</div>
+        <div class="card-value secondary" id="depositsSaved">—</div>
+        <div class="card-sub" id="depositsCount">—</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Interest / Month</div>
+        <div class="card-value payout" id="monthlyPayout">—</div>
+        <div class="card-sub" id="monthlyPayoutSub">Interest earned monthly</div>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="card chart-card">
+        <h2>Breakdown</h2>
+        <div class="donut-wrap">
+          <canvas id="donutChart" width="240" height="240"></canvas>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="tables-stack">
+        <div class="card table-card">
+          <h2>Money Saved</h2>
+          <div class="table-scroll">
+            <table class="data-table" id="moneyTable">
+              <thead>
+                <tr><th>Bank</th><th class="num">Amount</th><th class="num">Interest rate</th><th class="num" data-col-payout>Quarterly payout</th></tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div class="card table-card">
+          <h2>Deposits Saved</h2>
+          <div class="table-scroll">
+            <table class="data-table" id="depositsTable">
+              <thead>
+                <tr><th>Bank</th><th class="num">Amount</th><th class="num">Interest rate</th><th class="num" data-col-payout>Monthly payout</th></tr>
+              </thead>
+              <tbody></tbody>
+              <tfoot></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

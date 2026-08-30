@@ -1,7 +1,7 @@
 const SHEET_ID = '15rrejp1-Xv-zePaKZ99J3C6MeK0Kpej2RHEchYZ3E6U';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 
-const COLORS = ['#38bdf8', '#34d399', '#fbbf24', '#a78bfa', '#fb7185', '#f97316', '#22d3ee', '#4ade80'];
+const COLORS = ['#fb923c', '#fbbf24', '#f97316', '#fdba74', '#fecaca', '#ea580c', '#fb7185', '#fcd34d'];
 
 const fmt = (n, currency = true) =>
   n.toLocaleString('en-IN', currency ? { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 2 });
@@ -197,6 +197,13 @@ const moneyEl = document.getElementById('moneySaved');
     const moneyResult = renderTable(money, '#moneyTable', true);
     const depositResult = renderTable(deposits, '#depositsTable', false);
 
+    const moneyTitle = money.title || 'Money Saved';
+    const depositsTitle = deposits.title || 'Deposits Saved';
+    document.getElementById('moneyTitle').textContent = moneyTitle;
+    document.getElementById('depositsTitle').textContent = depositsTitle;
+    document.getElementById('moneySavedLabel').textContent = moneyTitle;
+    document.getElementById('depositsSavedLabel').textContent = depositsTitle;
+
     moneyEl.textContent = fmt(moneyResult.total);
     depositsEl.textContent = fmt(depositResult.total);
     moneyCount.innerHTML = `<span class="payout-note">${moneyResult.rows.length} accounts</span> · <strong>${fmt(moneyResult.payout)}/quarter</strong>`;
@@ -213,8 +220,8 @@ const moneyEl = document.getElementById('moneySaved');
     totalSub.textContent = `${uniqueAccounts.size} accounts tracked`;
 
     const entries = [
-      { label: 'Money Saved', value: moneyResult.total },
-      { label: 'Deposits Saved', value: depositResult.total },
+      { label: moneyTitle, value: moneyResult.total },
+      { label: depositsTitle, value: depositResult.total },
     ];
     drawDonut('donutChart', entries);
     renderLegend(legend, entries);

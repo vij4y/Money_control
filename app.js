@@ -1,7 +1,17 @@
 const SHEET_ID = '15rrejp1-Xv-zePaKZ99J3C6MeK0Kpej2RHEchYZ3E6U';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=0`;
 
+const REFRESH_MS = 30 * 1000;
+
 const COLORS = ['#fb923c', '#fbbf24', '#f97316', '#fdba74', '#fecaca', '#ea580c', '#fb7185', '#fcd34d'];
+const PALETTES = [
+  ['#fb923c', '#fbbf24'],
+  ['#a78bfa', '#f472b6'],
+  ['#34d399', '#22d3ee'],
+  ['#f87171', '#fb923c'],
+  ['#60a5fa', '#a78bfa'],
+  ['#fde047', '#fbbf24'],
+];
 
 const fmt = (n, currency = true) =>
   n.toLocaleString('en-IN', currency ? { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 2 });
@@ -55,8 +65,9 @@ function parseGroupedCsv(csv) {
     const b = (row[1] || '').trim();
     const c = (row[2] || '').trim();
 
-    if (/bank\s*name/i.test(a)) {
-      current = { title: b || a, rows: [], hasInterest: /(int?erest|rate)/i.test(c) };
+    if (/bank\s*name|pension\s*name|savings\s*name/i.test(a)) {
+      const fallback = /pension/i.test(a) ? 'Pensions' : /savings/i.test(a) ? 'Savings' : 'Accounts';
+      current = { title: b || fallback, rows: [], hasInterest: /(int?erest|rate)/i.test(c), groupName: a };
       groups.push(current);
       continue;
     }
@@ -75,62 +86,86 @@ function parseGroupedCsv(csv) {
   return groups;
 }
 
-function renderTable(answer, tbodySel, quarterly) {
-  const tbody = document.querySelector(`${tbodySel} tbody`);
-  const tfoot = document.querySelector(`${tbodySel} tfoot`);
-  const withInterest = answer.hasInterest;
-  if (!answer.rows.length) {
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="${withInterest ? 4 : 2}">No data</td></tr>`;
-    tfoot.innerHTML = '';
-    return { total: 0, payout: 0, rows: [] };
+function initials(name) {
+  const parts = String(name).trim().split(/[\s&\-]+/).filter(Boolean);
+  return (parts[0]?.[0] || '').toUpperCase() + (parts[1]?.[0] || '').toUpperCase();
+}
+
+function buildSection(group, index, quarterly, sectionsEl) {
+  const palette = PALETTES[index % PALETTES.length];
+
+  const card = document.createElement('div');
+  card.className = 'card table-card';
+  const title = group.title || 'Accounts';
+  card.innerHTML = `
+    <div class="section-head">
+      <h2>${title}</h2>
+      <span class="section-accounts" id="section-count-${index}"></span>
+    </div>
+    <div class="account-list" id="section-list-${index}"></div>
+    <div class="account-total" id="section-total-${index}"></div>
+  `;
+  sectionsEl.appendChild(card);
+
+  const list = card.querySelector(`#section-list-${index}`);
+  const countEl = card.querySelector(`#section-count-${index}`);
+  const totalEl = card.querySelector(`#section-total-${index}`);
+
+  if (!group.rows.length) {
+    list.innerHTML = `<div class="empty-row">No data</div>`;
+    totalEl.innerHTML = '';
+    return { total: 0, payout: 0, rows: [], quarterly: !!quarterly };
   }
 
-  const payoutOf = (r) => {
+  const payoutOf = (r, q) => {
     if (isNaN(r.rate) || isNaN(r.amount)) return 0;
     const annual = (r.amount * r.rate) / 100;
-    return quarterly ? annual / 4 : annual / 12;
+    return q ? annual / 4 : annual / 12;
   };
 
-  const rowsHtml = answer.rows.map((r) => {
-    if (withInterest) {
-      return `<tr>
-        <td>${r.name}</td>
-        <td class="num">${r.raw !== '' && !isNaN(r.amount) ? fmt(r.amount) : '—'}</td>
-        <td class="num">${isNaN(r.rate) ? '—' : rateFmt(r.rate)}</td>
-        <td class="num">${isNaN(r.rate) || isNaN(r.amount) ? '—' : fmt(payoutOf(r))}</td>
-      </tr>`;
-    }
-    return `<tr><td>${r.name}</td><td class="num">${r.raw !== '' && !isNaN(r.amount) ? fmt(r.amount) : '—'}</td></tr>`;
+  const withInterest = group.hasInterest;
+  const filled = withInterest
+    ? group.rows
+    : group.rows.filter((r) => !isNaN(r.amount) && r.amount > 0);
+
+  const cardHtml = filled.map((r, i) => {
+    const hasAmount = !isNaN(r.amount) && r.amount > 0;
+    const hasRate = withInterest && !isNaN(r.rate) && hasAmount;
+    const rate = withInterest && !isNaN(r.rate) ? r.rate : NaN;
+    return `<div class="acc-card">
+      <div class="acc-avatar" style="background:linear-gradient(135deg, ${palette[0]}, ${palette[1]})">${initials(r.name)}</div>
+      <div class="acc-main">
+        <div class="acc-name">${r.name}</div>
+        <div class="acc-rate">${hasRate ? rateFmt(rate) : withInterest ? '—' : ''}</div>
+      </div>
+      <div class="acc-right">
+        <div class="acc-amount">${hasAmount ? fmt(r.amount) : '—'}</div>
+        <div class="acc-payout">${hasRate ? `${fmt(payoutOf(r, quarterly))} / ${quarterly ? 'quarter' : 'month'}` : ''}</div>
+      </div>
+    </div>`;
   }).join('');
-  tbody.innerHTML = rowsHtml;
 
-  const computed = answer.rows.reduce((s, r) => s + (isNaN(r.amount) ? 0 : r.amount), 0);
-  const total = !isNaN(answer.total) ? answer.total : computed;
-  const totalPayout = answer.rows.reduce((s, r) => s + payoutOf(r), 0);
+  list.innerHTML = cardHtml;
+  countEl.textContent = `${filled.length} account${filled.length === 1 ? '' : 's'}`;
 
-  if (withInterest) {
-    tfoot.innerHTML = `<tr>
-      <td>Total</td>
-      <td class="num">${fmt(total)}</td>
-      <td></td>
-      <td class="num">${payoutBadge(totalPayout, quarterly)}</td>
-    </tr>`;
-  } else {
-    tfoot.innerHTML = `<tr><td>Total</td><td class="num">${fmt(total)}</td></tr>`;
-  }
-  return { total, payout: totalPayout, rows: answer.rows, quarterly: !!quarterly };
+  const computed = filled.reduce((s, r) => s + (isNaN(r.amount) ? 0 : r.amount), 0);
+  const total = !isNaN(group.total) ? group.total : computed;
+  const totalPayout = filled.reduce((s, r) => s + payoutOf(r, quarterly), 0);
+
+  const payoutLabel = withInterest
+    ? `${fmt(totalPayout)} <span class="payout-note">/ ${quarterly ? 'quarter' : 'month'}</span>`
+    : '';
+  totalEl.innerHTML = `<span>Total</span><span>${fmt(total)} ${withInterest ? `· ${payoutLabel}` : ''}</span>`;
+
+  return { total, payout: totalPayout, rows: filled, quarterly: !!quarterly };
 }
 
-function payoutBadge(n, quarterly) {
-  return `${fmt(n)} <span class="payout-note">/ ${quarterly ? 'quarter' : 'month'}</span>`;
-}
-
-function drawDonut(canvasId, entries) {
+function drawDonut(canvasId, entries, colors) {
   const canvas = document.getElementById(canvasId);
   const ctx = canvas.getContext('2d');
   const total = entries.reduce((s, e) => s + e.value, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (total === 0) {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#94a3b8';
     ctx.font = '600 14px Inter, sans-serif';
     ctx.textAlign = 'center';
@@ -150,16 +185,16 @@ function drawDonut(canvasId, entries) {
     ctx.arc(cx, cy, radius, start, end);
     ctx.arc(cx, cy, innerRadius, end, start, true);
     ctx.closePath();
-    ctx.fillStyle = COLORS[i % COLORS.length];
+    ctx.fillStyle = colors[i % colors.length];
     ctx.fill();
     start = end;
   });
 }
 
-function renderLegend(el, entries) {
+function renderLegend(el, entries, colors) {
   el.innerHTML = entries.map((e, i) =>
     `<div class="legend-item">
-      <span class="key"><span class="swatch" style="background:${COLORS[i % COLORS.length]}"></span>${e.label}</span>
+      <span class="key"><span class="swatch" style="background:${colors[i % colors.length]}"></span>${e.label}</span>
       <span class="val">${fmt(e.value)}</span>
     </div>`
   ).join('');
@@ -172,16 +207,20 @@ function fmtDate(d) {
 async function main() {
   const totalEl = document.getElementById('totalSavings');
   const totalSub = document.getElementById('totalSub');
-const moneyEl = document.getElementById('moneySaved');
-    const moneyCount = document.getElementById('moneySavedCount');
-    const depositsEl = document.getElementById('depositsSaved');
-    const depositsCount = document.getElementById('depositsCount');
-    const payoutEl = document.getElementById('monthlyPayout');
-    const payoutSub = document.getElementById('monthlyPayoutSub');
-    const legend = document.getElementById('legend');
+  const moneyEl = document.getElementById('moneySaved');
+  const moneyCount = document.getElementById('moneySavedCount');
+  const depositsEl = document.getElementById('depositsSaved');
+  const depositsCount = document.getElementById('depositsCount');
+  const payoutEl = document.getElementById('monthlyPayout');
+  const payoutSub = document.getElementById('monthlyPayoutSub');
+  const legend = document.getElementById('legend');
   const updatedAt = document.getElementById('updatedAt');
+  const btn = document.getElementById('refreshBtn');
 
   updatedAt.textContent = 'Fetching live data…';
+  btn.classList.add('spinning');
+  const sectionsEl = document.getElementById('sections');
+  sectionsEl.innerHTML = '';
   const errorBanner = document.querySelector('.layout .error-banner');
   if (errorBanner) errorBanner.remove();
 
@@ -193,38 +232,54 @@ const moneyEl = document.getElementById('moneySaved');
 
     if (!groups.length) throw new Error('No recognized tables found in the sheet.');
 
-    const [money, deposits] = groups;
-    const moneyResult = renderTable(money, '#moneyTable', true);
-    const depositResult = renderTable(deposits, '#depositsTable', false);
+    const results = groups.map((g, i) => buildSection(g, i, /*quarterly*/ i === 0, sectionsEl));
 
-    const moneyTitle = money.title || 'Money Saved';
-    const depositsTitle = deposits.title || 'Deposits Saved';
-    document.getElementById('moneyTitle').textContent = moneyTitle;
-    document.getElementById('depositsTitle').textContent = depositsTitle;
+    const usedTitles = new Set();
+    groups.forEach((g) => {
+      const orig = g.title;
+      if (usedTitles.has(orig)) {
+        const fallback = /pension/i.test(g.groupName) ? 'Pensions' : /savings/i.test(g.groupName) ? 'Savings' : `${orig} (2)`;
+        const head = sectionsEl.children[sectionsEl.children.length - groups.length + groups.indexOf(g)];
+        if (head) head.querySelector('h2').textContent = fallback;
+        g.title = fallback;
+      }
+      usedTitles.add(g.title);
+    });
+
+    const money = results[0];
+    const deposits = results[1];
+    const moneyTitle = groups[0].title || 'Money Saved';
+    const depositsTitle = groups[1] ? groups[1].title || 'Deposits Saved' : 'Deposits Saved';
     document.getElementById('moneySavedLabel').textContent = moneyTitle;
     document.getElementById('depositsSavedLabel').textContent = depositsTitle;
 
-    moneyEl.textContent = fmt(moneyResult.total);
-    depositsEl.textContent = fmt(depositResult.total);
-    moneyCount.innerHTML = `<span class="payout-note">${moneyResult.rows.length} accounts</span> · <strong>${fmt(moneyResult.payout)}/quarter</strong>`;
-    depositsCount.innerHTML = `<span class="payout-note">${depositResult.rows.length} accounts</span> · <strong>${fmt(depositResult.payout)}/month</strong>`;
-    payoutEl.textContent = fmt(depositResult.payout + moneyResult.payout / 3);
+    moneyEl.textContent = fmt(money.total);
+    depositsEl.textContent = deposits ? fmt(deposits.total) : '—';
+    moneyCount.innerHTML = `<span class="payout-note">${money.rows.length} accounts</span> · <strong>${fmt(money.payout)}/quarter</strong>`;
+    depositsCount.innerHTML = deposits
+      ? `<span class="payout-note">${deposits.rows.length} accounts</span> · <strong>${fmt(deposits.payout)}/month</strong>`
+      : '';
+
+    const moneyMonthly = money.payout / 3;
+    const depositMonthly = deposits ? deposits.payout : 0;
+    payoutEl.textContent = fmt(depositMonthly + moneyMonthly);
     payoutSub.innerHTML = `Deposits monthly + savings <span class="payout-note">(quarterly ÷ 3)</span>`;
 
-    const grandTotal = moneyResult.total + depositResult.total;
+    const grandTotal = results.reduce((s, r) => s + (isNaN(r.total) ? 0 : r.total), 0);
     totalEl.textContent = fmt(grandTotal);
 
     const uniqueAccounts = new Set(
-      [...moneyResult.rows, ...depositResult.rows].map((r) => r.name.trim().toLowerCase())
+      results.flatMap((r) => r.rows.map((x) => x.name.trim().toLowerCase()))
     );
     totalSub.textContent = `${uniqueAccounts.size} accounts tracked`;
 
     const entries = [
-      { label: moneyTitle, value: moneyResult.total },
-      { label: depositsTitle, value: depositResult.total },
+      { label: moneyTitle, value: money.total },
+      { label: depositsTitle, value: deposits ? deposits.total : 0 },
     ];
-    drawDonut('donutChart', entries);
-    renderLegend(legend, entries);
+    const legendColors = entries.map((e, i) => PALETTES[i % PALETTES.length][0]);
+    drawDonut('donutChart', entries, legendColors);
+    renderLegend(legend, entries, legendColors);
 
     updatedAt.textContent = `Updated: ${fmtDate(new Date())} · live from Google Sheets`;
   } catch (err) {
@@ -235,10 +290,13 @@ const moneyEl = document.getElementById('moneySaved');
     document.querySelector('.layout').prepend(banner);
     updatedAt.textContent = 'Load failed';
     totalEl.textContent = '—';
+  } finally {
+    btn.classList.remove('spinning');
   }
 }
 
-const REFRESH_MS = 60 * 1000;
+document.getElementById('refreshBtn').addEventListener('click', () => main());
+
 main();
 setInterval(() => {
   if (document.visibilityState === 'visible') {

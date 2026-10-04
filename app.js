@@ -96,7 +96,7 @@ const BANK_LOGO_DOMAINS = {
   'city union': 'cityunionbank.com',
   'atal pension yojana': 'npscra.nsdl.co.in',
   'epfo': 'img/epfo-logo.png',
-  'apy': 'atalpensionyojana.in',
+  'apy': 'img/apy-logo.jpg',
 };
 const logoUrlFor = (name) => {
   const key = Object.keys(BANK_LOGO_DOMAINS).find((k) => String(name).toLowerCase().includes(k));

@@ -89,17 +89,23 @@ function parseGroupedCsv(csv) {
 const BANK_LOGO_DOMAINS = {
   'axis': 'axisbank.com',
   'bob': 'bankofbaroda.com',
-  'kvb': 'kvb.co.in',
+  'kvb': 'img/kvb.png',
   'canara': 'canarabank.com',
   'hdfc': 'hdfcbank.com',
   'post office': 'indiapost.gov.in',
+  'city union': 'cityunionbank.com',
   'atal pension yojana': 'npscra.nsdl.co.in',
-  'epfo': 'epfindia.gov.in',
-  'apy': 'npscra.nsdl.co.in',
+  'epfo': 'img/epfo-logo.png',
+  'apy': 'atalpensionyojana.in',
 };
 const logoUrlFor = (name) => {
   const key = Object.keys(BANK_LOGO_DOMAINS).find((k) => String(name).toLowerCase().includes(k));
-  return key ? `https://www.google.com/s2/favicons?domain=${BANK_LOGO_DOMAINS[key]}&sz=128` : null;
+  const domain = BANK_LOGO_DOMAINS[key];
+  return domain && domain.startsWith('img/')
+    ? domain
+    : domain
+      ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128`
+      : null;
 };
 
 function initials(name) {

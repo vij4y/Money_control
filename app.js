@@ -86,6 +86,22 @@ function parseGroupedCsv(csv) {
   return groups;
 }
 
+const BANK_LOGO_DOMAINS = {
+  'axis': 'axisbank.com',
+  'bob': 'bankofbaroda.com',
+  'kvb': 'kvb.co.in',
+  'canara': 'canarabank.com',
+  'hdfc': 'hdfcbank.com',
+  'post office': 'indiapost.gov.in',
+  'atal pension yojana': 'npscra.nsdl.co.in',
+  'epfo': 'epfindia.gov.in',
+  'apy': 'npscra.nsdl.co.in',
+};
+const logoUrlFor = (name) => {
+  const key = Object.keys(BANK_LOGO_DOMAINS).find((k) => String(name).toLowerCase().includes(k));
+  return key ? `https://www.google.com/s2/favicons?domain=${BANK_LOGO_DOMAINS[key]}&sz=128` : null;
+};
+
 function initials(name) {
   const parts = String(name).trim().split(/[\s&\-]+/).filter(Boolean);
   return (parts[0]?.[0] || '').toUpperCase() + (parts[1]?.[0] || '').toUpperCase();
@@ -132,8 +148,12 @@ function buildSection(group, index, quarterly, sectionsEl) {
     const hasAmount = !isNaN(r.amount) && r.amount > 0;
     const hasRate = withInterest && !isNaN(r.rate) && hasAmount;
     const rate = withInterest && !isNaN(r.rate) ? r.rate : NaN;
+    const logoUrl = logoUrlFor(r.name);
+    const avatar = logoUrl
+      ? `<img class="acc-avatar acc-logo" src="${logoUrl}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;acc-avatar&quot; style=&quot;background:linear-gradient(135deg, ${palette[0]}, ${palette[1]})&quot;>${initials(r.name)}</div>'">`
+      : `<div class="acc-avatar" style="background:linear-gradient(135deg, ${palette[0]}, ${palette[1]})">${initials(r.name)}</div>`;
     return `<div class="acc-card">
-      <div class="acc-avatar" style="background:linear-gradient(135deg, ${palette[0]}, ${palette[1]})">${initials(r.name)}</div>
+      ${avatar}
       <div class="acc-main">
         <div class="acc-name">${r.name}</div>
         <div class="acc-rate">${hasRate ? rateFmt(rate) : withInterest ? '—' : ''}</div>

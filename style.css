@@ -182,6 +182,11 @@ body {
   color: #fff;
   letter-spacing: 0.02em;
 }
+.acc-avatar.acc-logo {
+  background: #fff;
+  padding: 5px;
+  object-fit: contain;
+}
 .acc-main { flex: 1 1 auto; min-width: 0; }
 .acc-name { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .acc-rate { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.15rem; font-weight: 600; }

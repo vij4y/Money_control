@@ -64,10 +64,20 @@ function parseGroupedCsv(csv) {
     const a = (row[0] || '').trim();
     const b = (row[1] || '').trim();
     const c = (row[2] || '').trim();
+    const d = (row[3] || '').trim();
 
-    if (/bank\s*name|pension\s*name|savings\s*name/i.test(a)) {
-      const fallback = /pension/i.test(a) ? 'Pensions' : /savings/i.test(a) ? 'Savings' : 'Accounts';
-      current = { title: b || fallback, rows: [], hasInterest: /(int?erest|rate)/i.test(c), groupName: a };
+    let kind = 'account';
+    if (/bank\s*name/i.test(a)) kind = 'account';
+    else if (/pension\s*name/i.test(a)) kind = 'pension';
+    else if (/shop\s*name/i.test(a)) kind = 'gold';
+    else if (/savings\s*name/i.test(a)) kind = 'savings';
+
+    if (/bank\s*name|pension\s*name|shop\s*name|savings\s*name/i.test(a)) {
+      const fallback =
+        kind === 'pension' ? 'Pensions' :
+        kind === 'gold' ? 'Gold Jewellery' :
+        kind === 'savings' ? 'Savings' : 'Accounts';
+      current = { title: kind === 'account' ? (b || fallback) : fallback, rawTitle: b, rows: [], hasInterest: /(int?erest|rate)/i.test(c), groupName: a, kind };
       groups.push(current);
       continue;
     }
@@ -81,7 +91,7 @@ function parseGroupedCsv(csv) {
       if (current.total === undefined && !isNaN(val)) current.total = val;
       continue;
     }
-    current.rows.push({ name: a, amount: isNaN(val) ? 0 : val, raw: b, rate: isNaN(rate) ? NaN : rate });
+    current.rows.push({ name: a, amount: isNaN(val) ? 0 : val, raw: b, rate: isNaN(rate) ? NaN : rate, grams: c, material: d });
   }
   return groups;
 }
@@ -97,6 +107,7 @@ const BANK_LOGO_DOMAINS = {
   'atal pension yojana': 'npscra.nsdl.co.in',
   'epfo': 'img/epfo-logo.png',
   'apy': 'img/apy-logo.jpg',
+  'grt': 'img/grt-logo.webp',
 };
 const logoUrlFor = (name) => {
   const key = Object.keys(BANK_LOGO_DOMAINS).find((k) => String(name).toLowerCase().includes(k));
@@ -154,25 +165,33 @@ function buildSection(group, index, quarterly, sectionsEl) {
     const hasAmount = !isNaN(r.amount) && r.amount > 0;
     const hasRate = withInterest && !isNaN(r.rate) && hasAmount;
     const rate = withInterest && !isNaN(r.rate) ? r.rate : NaN;
+    const isGold = group.kind === 'gold';
     const logoUrl = logoUrlFor(r.name);
     const avatar = logoUrl
       ? `<img class="acc-avatar acc-logo" src="${logoUrl}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;acc-avatar&quot; style=&quot;background:linear-gradient(135deg, ${palette[0]}, ${palette[1]})&quot;>${initials(r.name)}</div>'">`
-      : `<div class="acc-avatar" style="background:linear-gradient(135deg, ${palette[0]}, ${palette[1]})">${initials(r.name)}</div>`;
+      : `<div class="acc-avatar${isGold ? ' gold-avatar' : ''}" ${isGold ? '' : `style="background:linear-gradient(135deg, ${palette[0]}, ${palette[1]})"`}>${isGold ? '🥇' : initials(r.name)}</div>`;
+    const sub = isGold
+      ? `${r.grams ? r.grams.trim() + ' g' : ''}${r.material ? ` · ${r.material.trim()}` : ''}`
+      : hasRate ? rateFmt(rate) : withInterest ? '—' : '';
+    const payout = isGold
+      ? ''
+      : hasRate ? `${fmt(payoutOf(r, quarterly))} / ${quarterly ? 'quarter' : 'month'}` : '';
     return `<div class="acc-card">
       ${avatar}
       <div class="acc-main">
         <div class="acc-name">${r.name}</div>
-        <div class="acc-rate">${hasRate ? rateFmt(rate) : withInterest ? '—' : ''}</div>
+        <div class="acc-rate">${sub}</div>
       </div>
       <div class="acc-right">
         <div class="acc-amount">${hasAmount ? fmt(r.amount) : '—'}</div>
-        <div class="acc-payout">${hasRate ? `${fmt(payoutOf(r, quarterly))} / ${quarterly ? 'quarter' : 'month'}` : ''}</div>
+        <div class="acc-payout">${payout}</div>
       </div>
     </div>`;
   }).join('');
 
+  const noun = group.kind === 'gold' ? 'item' : 'account';
   list.innerHTML = cardHtml;
-  countEl.textContent = `${filled.length} account${filled.length === 1 ? '' : 's'}`;
+  countEl.textContent = `${filled.length} ${noun}${filled.length === 1 ? '' : 's'}`;
 
   const computed = filled.reduce((s, r) => s + (isNaN(r.amount) ? 0 : r.amount), 0);
   const total = !isNaN(group.total) ? group.total : computed;
@@ -181,7 +200,10 @@ function buildSection(group, index, quarterly, sectionsEl) {
   const payoutLabel = withInterest
     ? `${fmt(totalPayout)} <span class="payout-note">/ ${quarterly ? 'quarter' : 'month'}</span>`
     : '';
-  totalEl.innerHTML = `<span>Total</span><span>${fmt(total)} ${withInterest ? `· ${payoutLabel}` : ''}</span>`;
+  const gramsTotal = group.kind === 'gold'
+    ? filled.reduce((s, r) => s + (parseFloat(String(r.grams).replace(/[^\d.]/g, '')) || 0), 0)
+    : 0;
+  totalEl.innerHTML = `<span>Total</span><span>${fmt(total)} ${withInterest ? `· ${payoutLabel}` : ''}${gramsTotal ? ` <span class="payout-note">· ${gramsTotal.toFixed(3)} g</span>` : ''}</span>`;
 
   return { total, payout: totalPayout, rows: filled, quarterly: !!quarterly };
 }

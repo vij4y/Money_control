@@ -3,14 +3,14 @@ const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?forma
 
 const REFRESH_MS = 30 * 1000;
 
-const COLORS = ['#fb923c', '#fbbf24', '#f97316', '#fdba74', '#fecaca', '#ea580c', '#fb7185', '#fcd34d'];
+const COLORS = ['#0d9488', '#059669', '#2563eb', '#7c3aed', '#d97706', '#e11d48', '#0891b2', '#4f46e5'];
 const PALETTES = [
-  ['#fb923c', '#fbbf24'],
-  ['#a78bfa', '#f472b6'],
-  ['#34d399', '#22d3ee'],
-  ['#f87171', '#fb923c'],
-  ['#60a5fa', '#a78bfa'],
-  ['#fde047', '#fbbf24'],
+  ['#99f6e4', '#0d9488'],
+  ['#a7f3d0', '#059669'],
+  ['#bfdbfe', '#2563eb'],
+  ['#ddd6fe', '#7c3aed'],
+  ['#fde68a', '#d97706'],
+  ['#fecdd3', '#e11d48'],
 ];
 
 const fmt = (n, currency = true) =>
@@ -252,6 +252,64 @@ function fmtDate(d) {
   return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+const GOAL_KEY = 'moneyControl.goalTarget';
+let currentFd = 0;
+
+function goalTargetValue() {
+  const el = document.getElementById('goalInput');
+  const v = Number(el && el.value);
+  return Number.isFinite(v) && v > 0 ? v : 0;
+}
+
+function fdTotalAmount(groups, results) {
+  let total = 0;
+  groups.forEach((g, i) => {
+    if (g.kind === 'gold' || g.kind === 'pension') return;
+    const label = `${g.title || ''} ${g.rawTitle || ''} ${g.groupName || ''}`;
+    if (/fixed\s*deposit|\bfd\b/i.test(label)) {
+      const v = results[i] && results[i].total;
+      total += isNaN(v) ? 0 : v;
+    }
+  });
+  return total;
+}
+
+function renderGoal() {
+  const target = goalTargetValue();
+  const saved = currentFd;
+  const pct = target > 0 ? Math.min(100, (saved / target) * 100) : 0;
+  const remaining = Math.max(0, target - saved);
+
+  document.getElementById('goalFill').style.width = `${pct}%`;
+  document.getElementById('goalPercent').textContent = `${pct.toFixed(1)}%`;
+  document.getElementById('goalSaved').textContent = fmt(saved);
+
+  const remEl = document.getElementById('goalRemaining');
+  if (target <= 0) {
+    remEl.textContent = 'Set a target';
+    remEl.className = '';
+  } else if (remaining <= 0) {
+    remEl.textContent = saved > target ? `Goal reached · surplus ${fmt(saved - target)}` : 'Goal reached';
+    remEl.className = 'goal-done';
+  } else {
+    remEl.textContent = fmt(remaining);
+    remEl.className = 'goal-pending';
+  }
+}
+
+function initGoal() {
+  const input = document.getElementById('goalInput');
+  if (!input) return;
+  let stored = null;
+  try { stored = localStorage.getItem(GOAL_KEY); } catch (e) { /* storage unavailable */ }
+  if (stored && Number(stored) > 0) input.value = stored;
+  input.addEventListener('input', () => {
+    try { localStorage.setItem(GOAL_KEY, String(input.value)); } catch (e) { /* ignore */ }
+    renderGoal();
+  });
+  renderGoal();
+}
+
 async function main() {
   const totalEl = document.getElementById('totalSavings');
   const totalSub = document.getElementById('totalSub');
@@ -259,8 +317,10 @@ async function main() {
   const moneyCount = document.getElementById('moneySavedCount');
   const depositsEl = document.getElementById('depositsSaved');
   const depositsCount = document.getElementById('depositsCount');
-  const payoutEl = document.getElementById('monthlyPayout');
-  const payoutSub = document.getElementById('monthlyPayoutSub');
+  const depositInterestEl = document.getElementById('depositInterest');
+  const depositInterestSub = document.getElementById('depositInterestSub');
+  const savingsInterestEl = document.getElementById('savingsInterest');
+  const savingsInterestSub = document.getElementById('savingsInterestSub');
   const legend = document.getElementById('legend');
   const updatedAt = document.getElementById('updatedAt');
   const btn = document.getElementById('refreshBtn');
@@ -308,13 +368,17 @@ async function main() {
       ? `<span class="payout-note">${deposits.rows.length} accounts</span> · <strong>${fmt(deposits.payout)}/month</strong>`
       : '';
 
-    const moneyMonthly = money.payout / 3;
     const depositMonthly = deposits ? deposits.payout : 0;
-    payoutEl.textContent = fmt(depositMonthly + moneyMonthly);
-    payoutSub.innerHTML = `Deposits monthly + savings <span class="payout-note">(quarterly ÷ 3)</span>`;
+    depositInterestEl.textContent = fmt(depositMonthly);
+    depositInterestSub.innerHTML = `<span class="payout-note">${deposits ? deposits.rows.length : 0} accounts</span> · monthly`;
+
+    savingsInterestEl.textContent = fmt(money.payout);
+    savingsInterestSub.innerHTML = `<span class="payout-note">${money.rows.length} accounts</span> · quarterly`;
 
     const grandTotal = results.reduce((s, r) => s + (isNaN(r.total) ? 0 : r.total), 0);
     totalEl.textContent = fmt(grandTotal);
+    currentFd = fdTotalAmount(groups, results);
+    renderGoal();
 
     const uniqueAccounts = new Set(
       results.flatMap((r) => r.rows.map((x) => x.name.trim().toLowerCase()))
@@ -325,7 +389,7 @@ async function main() {
       { label: moneyTitle, value: money.total },
       { label: depositsTitle, value: deposits ? deposits.total : 0 },
     ];
-    const legendColors = entries.map((e, i) => PALETTES[i % PALETTES.length][0]);
+    const legendColors = entries.map((e, i) => PALETTES[i % PALETTES.length][1]);
     drawDonut('donutChart', entries, legendColors);
     renderLegend(legend, entries, legendColors);
 
@@ -338,6 +402,8 @@ async function main() {
     document.querySelector('.layout').prepend(banner);
     updatedAt.textContent = 'Load failed';
     totalEl.textContent = '—';
+    depositInterestEl.textContent = '—';
+    savingsInterestEl.textContent = '—';
   } finally {
     btn.classList.remove('spinning');
   }
@@ -345,6 +411,7 @@ async function main() {
 
 document.getElementById('refreshBtn').addEventListener('click', () => main());
 
+initGoal();
 main();
 setInterval(() => {
   if (document.visibilityState === 'visible') {

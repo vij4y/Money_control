@@ -6,14 +6,29 @@
   <title>Money Control</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="money-bg-decor" aria-hidden="true">
+    <div class="floating-money m1">✦</div>
+    <div class="floating-money m2">✧</div>
+    <div class="floating-money m3">✦</div>
+    <div class="floating-money m4">✶</div>
+    <div class="floating-money m5">✧</div>
+    <div class="floating-money m6">✦</div>
+    <div class="floating-money m7">✶</div>
+    <div class="floating-money m8">✧</div>
+  </div>
+
   <header class="topbar">
     <div class="container topbar-inner">
       <div class="brand">
-        <h1>Money Control</h1>
+        <span class="brand-mark">✦</span>
+        <div class="brand-text">
+          <h1>Money Control</h1>
+          <span class="brand-tagline">Savings &amp; deposits</span>
+        </div>
       </div>
       <div class="topbar-right">
         <span class="updated-at" id="updatedAt">Loading…</span>
@@ -46,9 +61,39 @@
         <div class="card-sub" id="depositsCount">—</div>
       </div>
       <div class="card">
-        <div class="card-label">Interest / Month</div>
-        <div class="card-value payout" id="monthlyPayout">—</div>
-        <div class="card-sub" id="monthlyPayoutSub">Interest earned monthly</div>
+        <div class="card-label">Deposits Interest</div>
+        <div class="card-value payout" id="depositInterest">—</div>
+        <div class="card-sub" id="depositInterestSub">Deposits · monthly</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Savings Interest</div>
+        <div class="card-value payout" id="savingsInterest">—</div>
+        <div class="card-sub" id="savingsInterestSub">Savings · quarterly</div>
+      </div>
+    </section>
+
+    <section class="card goal-card">
+      <div class="goal-top">
+        <div>
+          <div class="card-label">FD Goal</div>
+          <div class="goal-target-line">
+            <span>Target</span>
+            <span class="goal-currency">₹</span>
+            <input id="goalInput" class="goal-input" type="number" min="0" step="1000" value="10000000" aria-label="FD goal target amount" />
+          </div>
+        </div>
+        <div class="goal-percent" id="goalPercent">0%</div>
+      </div>
+      <div class="goal-bar"><div class="goal-fill" id="goalFill"></div></div>
+      <div class="goal-meta">
+        <div>
+          <span class="goal-meta-label">FD amount</span>
+          <strong id="goalSaved">—</strong>
+        </div>
+        <div>
+          <span class="goal-meta-label">Remaining to save</span>
+          <strong id="goalRemaining" class="goal-pending">—</strong>
+        </div>
       </div>
     </section>
 
